@@ -60,7 +60,7 @@ The escrow system enables secure transactions between Buyers and Sellers using b
 ##  Project Structure
 
 ```
-fabric-escrow-network/
+fabric-escrow/
 ├── README.md                          # This file
 ├── DEPLOYMENT.md                      # Step-by-step deployment guide
 ├── ARCHITECTURE.md                    # Detailed architecture explanation
@@ -117,7 +117,8 @@ fabric-escrow-network/
 ### 1. Clone & Setup
 
 ```bash
-cd fabric-escrow-network
+clone https://github.com/hananeodl/fabric-real-estate-escrow-Hanane_oudaali_-_Saida_alaba.git
+cd fabric-escrow
 ```
 
 ### 2. Generate Crypto Material
