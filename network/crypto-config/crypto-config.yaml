@@ -1,0 +1,50 @@
+# crypto-config.yaml
+# This file defines the certificate and key generation for all organizations
+# Equivalent to Ethereum account/keystore generation
+
+# OrdererOrgs defines orderer organizations
+OrdererOrgs:
+  - Name: Orderer
+    Domain: example.com
+    EnableNodeOUs: true
+    
+    # Orderer nodes
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost
+          - 127.0.0.1
+
+# PeerOrgs defines peer organizations (Buyer and Seller)
+PeerOrgs:
+  # Org1 represents the Buyer organization
+  - Name: Org1
+    Domain: org1.example.com
+    EnableNodeOUs: true
+    
+    # Create 1 user (in addition to Admin)
+    Users:
+      Count: 1
+    
+    # Peer nodes for Org1
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+
+  # Org2 represents the Seller organization
+  - Name: Org2
+    Domain: org2.example.com
+    EnableNodeOUs: true
+    
+    # Create 1 user (in addition to Admin)
+    Users:
+      Count: 1
+    
+    # Peer nodes for Org2
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1

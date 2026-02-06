@@ -1,0 +1,22 @@
+{
+  "name": "fabric-escrow-client",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric Escrow Client Application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "enroll": "node enrollUser.js"
+  },
+  "keywords": [
+    "hyperledger",
+    "fabric",
+    "escrow",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fabric-ca-client": "^2.5.0",
+    "fabric-network": "^2.5.0"
+  }
+}
