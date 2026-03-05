@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fabric Escrow - Real Estate</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .nav a {
+            margin-left: 20px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+        .nav a:hover {
+            color: #667eea;
+        }
+        .hero {
+            background: white;
+            border-radius: 15px;
+            padding: 60px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 40px;
+        }
+        .hero h1 {
+            font-size: 48px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 18px;
+            color: #666;
+            max-width: 800px;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .feature-card h3 {
+            color: #333;
+            margin: 20px 0 10px;
+        }
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .feature-icon {
+            font-size: 48px;
+        }
+        .how-it-works {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-top: 50px;
+        }
+        .how-it-works h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        .step {
+            text-align: center;
+            position: relative;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-weight: bold;
+        }
+        .step h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .step p {
+            color: #666;
+            line-height: 1.6;
+        }
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: white;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏠 Fabric Escrow</div>
+            <div class="nav">
+                <% if (user) { %>
+                    <span>Welcome, <%= user.name %></span>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/logout">Logout</a>
+                <% } else { %>
+                    <a href="/login">Login</a>
+                    <a href="/register">Register</a>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="hero">
+            <h1>Secure Real Estate Transactions</h1>
+            <p>Buy and sell properties with confidence using blockchain-based escrow.
+               Our platform ensures that funds are only released when all conditions are met.</p>
+            <div class="cta-buttons">
+                <% if (!user) { %>
+                    <a href="/register" class="btn btn-primary">Get Started</a>
+                    <a href="#how-it-works" class="btn btn-secondary">Learn More</a>
+                <% } else { %>
+                    <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Secure Escrow</h3>
+                <p>Funds are held in smart contracts and only released when all parties approve the transaction.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📄</div>
+                <h3>Title Verification</h3>
+                <p>All property titles are verified by authorized parties before listing.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Fast & Transparent</h3>
+                <p>All transactions are recorded on the blockchain for complete transparency and traceability.</p>
+            </div>
+        </div>
+
+        <div class="how-it-works" id="how-it-works">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Seller Lists Property</h3>
+                    <p>Seller adds property details and uploads title deed for verification.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Buyer Makes Offer</h3>
+                    <p>Interested buyers submit offers on verified properties.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Holding Deposit</h3>
+                    <p>Buyer pays holding deposit to secure the property.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Contract Signing</h3>
+                    <p>Both parties review and sign the sales contract.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <h3>Final Payment</h3>
+                    <p>Buyer deposits final payment into blockchain escrow.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <h3>Title Transfer</h3>
+                    <p>Both parties approve final title deed and funds are released.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2026 Fabric Escrow - Secure Real Estate Transactions on Blockchain</p>
+        </footer>
+    </div>
+</body>
+</html>

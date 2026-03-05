@@ -1,0 +1,363 @@
+const path = require('path');
+const { Gateway, Wallets } = require('fabric-network');
+const FabricCAServices = require('fabric-ca-client');
+const fs = require('fs');
+const yaml = require('js-yaml');
+
+class FabricClient {
+    constructor() {
+        this.gateway = null;
+        this.contract = null;
+        this.network = null;
+        this.wallet = null;
+        this.currentUser = null;
+    }
+
+    /**
+     * Load connection profile from YAML file
+     */
+    async loadConnectionProfile() {
+        try {
+            // Utiliser le config.yaml du go-client
+            const configPath = path.resolve(__dirname, '..', 'client', 'go-client', 'config.yaml');
+            console.log(`Loading config from: ${configPath}`);
+
+            const fileContents = fs.readFileSync(configPath, 'utf8');
+            const config = yaml.load(fileContents);
+
+            // Créer le CCP en résolvant les chemins absolus
+            const ccp = {
+                name: config.name,
+                version: config.version,
+                client: config.client,
+                channels: config.channels,
+                organizations: config.organizations,
+                orderers: {},
+                peers: {},
+                certificateAuthorities: {}
+            };
+
+            // Résoudre les chemins absolus pour les orderers
+            for (const [name, orderer] of Object.entries(config.orderers)) {
+                const tlsPath = orderer.tlsCACerts.path.replace('../../network/', '');
+                ccp.orderers[name] = {
+                    url: orderer.url,
+                    grpcOptions: orderer.grpcOptions,
+                    tlsCACerts: {
+                        path: path.resolve(__dirname, '..', 'network', tlsPath)
+                    }
+                };
+                console.log(`Orderer ${name} TLS path: ${ccp.orderers[name].tlsCACerts.path}`);
+            }
+
+            // Résoudre les chemins absolus pour les peers
+            for (const [name, peer] of Object.entries(config.peers)) {
+                const tlsPath = peer.tlsCACerts.path.replace('../../network/', '');
+                ccp.peers[name] = {
+                    url: peer.url,
+                    grpcOptions: peer.grpcOptions,
+                    tlsCACerts: {
+                        path: path.resolve(__dirname, '..', 'network', tlsPath)
+                    }
+                };
+                console.log(`Peer ${name} TLS path: ${ccp.peers[name].tlsCACerts.path}`);
+            }
+
+            // Résoudre les chemins absolus pour les CAs
+            for (const [name, ca] of Object.entries(config.certificateAuthorities)) {
+                const tlsPath = ca.tlsCACerts.path.replace('../../network/', '');
+                ccp.certificateAuthorities[name] = {
+                    url: ca.url,
+                    caName: ca.caName,
+                    tlsCACerts: {
+                        path: path.resolve(__dirname, '..', 'network', tlsPath)
+                    },
+                    httpOptions: ca.httpOptions
+                };
+                console.log(`CA ${name} TLS path: ${ccp.certificateAuthorities[name].tlsCACerts.path}`);
+            }
+
+            return ccp;
+        } catch (error) {
+            console.error(`Error loading connection profile: ${error}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Enroll a new user with the Certificate Authority
+     */
+   async enrollUser(org, userId, userType) {
+    try {
+        // Load connection profile
+        const ccp = await this.loadConnectionProfile();
+
+        // Create wallet directory if it doesn't exist
+        const walletPath = path.join(__dirname, 'wallet');
+        if (!fs.existsSync(walletPath)) {
+            fs.mkdirSync(walletPath, { recursive: true });
+        }
+
+        this.wallet = await Wallets.newFileSystemWallet(walletPath);
+
+        // Check if user already exists
+        const identity = await this.wallet.get(userId);
+        if (identity) {
+            console.log(`User ${userId} already exists in wallet`);
+            return true;
+        }
+
+        // Connect to CA
+        const caInfo = ccp.certificateAuthorities[`ca.org${org}.example.com`];
+        if (!caInfo) {
+            console.error(`CA for org${org} not found`);
+            return false;
+        }
+
+        const caTLSCACerts = fs.readFileSync(caInfo.tlsCACerts.path);
+        const ca = new FabricCAServices(caInfo.url, {
+            trustedRoots: caTLSCACerts,
+            verify: false
+        }, caInfo.caName);
+
+        // ESSAYONS D'ABORD DE S'AUTHENTIFIER DIRECTEMENT AVEC L'UTILISATEUR
+        // (sans passer par admin)
+        try {
+            console.log(`Attempting direct enrollment for ${userId}...`);
+            const enrollment = await ca.enroll({
+                enrollmentID: userId,
+                enrollmentSecret: 'password'  // Essayez avec 'password' comme secret
+            });
+
+            const userIdentity = {
+                credentials: {
+                    certificate: enrollment.certificate,
+                    privateKey: enrollment.key.toBytes(),
+                },
+                mspId: `Org${org}MSP`,
+                type: 'X.509',
+            };
+            await this.wallet.put(userId, userIdentity);
+
+            console.log(`✓ User ${userId} enrolled successfully for Org${org}`);
+            return true;
+        } catch (directError) {
+            console.log('Direct enrollment failed, trying admin enrollment...');
+
+            // Si direct échoue, essayer avec admin
+            try {
+                // Enroll admin first
+                const adminEnrollment = await ca.enroll({
+                    enrollmentID: 'admin',
+                    enrollmentSecret: 'adminpw'
+                });
+
+                const adminIdentity = {
+                    credentials: {
+                        certificate: adminEnrollment.certificate,
+                        privateKey: adminEnrollment.key.toBytes(),
+                    },
+                    mspId: `Org${org}MSP`,
+                    type: 'X.509',
+                };
+                await this.wallet.put('admin', adminIdentity);
+
+                // Register new user via admin
+                const adminProvider = this.wallet.getProviderRegistry().getProvider(adminIdentity.type);
+                const adminUser = await adminProvider.getUserContext(adminIdentity, 'admin');
+
+                const secret = await ca.register({
+                    enrollmentID: userId,
+                    affiliation: `org${org}.department1`,
+                    role: 'client',
+                    attrs: [{ name: 'userType', value: userType, ecert: true }]
+                }, adminUser);
+
+                const enrollment = await ca.enroll({
+                    enrollmentID: userId,
+                    enrollmentSecret: secret
+                });
+
+                const userIdentity = {
+                    credentials: {
+                        certificate: enrollment.certificate,
+                        privateKey: enrollment.key.toBytes(),
+                    },
+                    mspId: `Org${org}MSP`,
+                    type: 'X.509',
+                };
+                await this.wallet.put(userId, userIdentity);
+
+                console.log(`✓ User ${userId} enrolled successfully for Org${org} via admin`);
+                return true;
+            } catch (adminError) {
+                console.error(`✗ Admin enrollment failed: ${adminError}`);
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error(`✗ Failed to enroll user: ${error}`);
+        return false;
+    }
+}
+
+ async connect(userId) {
+    try {
+        // Load connection profile
+        const ccp = await this.loadConnectionProfile();
+
+        // Load wallet
+        const walletPath = path.join(__dirname, 'wallet');
+        this.wallet = await Wallets.newFileSystemWallet(walletPath);
+
+        // Check if user exists
+        const identity = await this.wallet.get(userId);
+        if (!identity) {
+            console.log(`User ${userId} not found in wallet`);
+            return false;
+        }
+
+        // DÉSACTIVER LA DÉCOUVERTE - Solution simple qui fonctionne
+        this.gateway = new Gateway();
+
+        const connectOptions = {
+            wallet: this.wallet,
+            identity: userId,
+            discovery: {
+                enabled: false,  // Désactivé pour éviter l'erreur access denied
+                asLocalhost: true
+            }
+        };
+
+        await this.gateway.connect(ccp, connectOptions);
+
+        // Obtenir le réseau et le contrat
+        this.network = await this.gateway.getNetwork('mychannel');
+        this.contract = this.network.getContract('escrow');
+        this.currentUser = userId;
+
+        console.log(`✓ Connected as ${userId}`);
+        return true;
+
+    } catch (error) {
+        console.error(`✗ Failed to connect: ${error}`);
+        return false;
+    }
+}
+    /**
+     * Disconnect from the network
+     */
+    disconnect() {
+        if (this.gateway) {
+            this.gateway.disconnect();
+            this.currentUser = null;
+            console.log('Disconnected from network');
+        }
+    }
+
+    /**
+     * Create a new escrow (Seller only)
+     */
+    async createEscrow(escrowId, buyer, amount, propertyHash) {
+        try {
+            const result = await this.contract.submitTransaction(
+                'CreateEscrow',
+                escrowId,
+                buyer,
+                amount.toString(),
+                propertyHash
+            );
+            return { success: true, message: result.toString() };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Query an escrow
+     */
+    async queryEscrow(escrowId) {
+        try {
+            const result = await this.contract.evaluateTransaction('QueryEscrow', escrowId);
+            return { success: true, data: JSON.parse(result.toString()) };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Get all escrows
+     */
+    async getAllEscrows() {
+        try {
+            const result = await this.contract.evaluateTransaction('GetAllEscrows');
+            return { success: true, data: JSON.parse(result.toString()) };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Deposit funds (Buyer only)
+     */
+    async depositFunds(escrowId) {
+        try {
+            const result = await this.contract.submitTransaction('DepositFunds', escrowId);
+            return { success: true, message: result.toString() };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Get escrows by status
+     */
+    async getEscrowsByStatus(status) {
+        try {
+            const result = await this.contract.evaluateTransaction('GetEscrowsByStatus', status);
+            return { success: true, data: JSON.parse(result.toString()) };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Diagnose connection
+     */
+    async diagnoseConnection(userId) {
+        console.log(`\n🔍 Diagnostic de connexion pour ${userId}`);
+        console.log('========================================');
+
+        try {
+            const ccp = await this.loadConnectionProfile();
+            const walletPath = path.join(__dirname, 'wallet');
+            const wallet = await Wallets.newFileSystemWallet(walletPath);
+
+            const identity = await wallet.get(userId);
+            if (!identity) {
+                console.log(`❌ User ${userId} not found in wallet`);
+                return false;
+            }
+            console.log(`✅ User ${userId} found in wallet`);
+            console.log(`   MSP ID: ${identity.mspId}`);
+
+            // Vérifier les peers
+            console.log('\n📡 Vérification des peers:');
+            for (const [peerName, peer] of Object.entries(ccp.peers)) {
+                console.log(`   - ${peerName}: ${peer.url}`);
+            }
+
+            // Vérifier le channel
+            console.log(`\n📦 Channel: mychannel`);
+            console.log('✅ Configuration valide');
+            console.log('========================================\n');
+
+            return true;
+        } catch (error) {
+            console.log(`❌ Erreur de diagnostic: ${error}`);
+            return false;
+        }
+    }
+}
+
+module.exports = FabricClient;

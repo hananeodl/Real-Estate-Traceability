@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Verification - Fabric Escrow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .nav a {
+            margin-left: 20px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+        .nav a:hover {
+            color: #667eea;
+        }
+        .welcome {
+            margin-right: 20px;
+            color: #333;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .property-info {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .property-info h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .info-label {
+            width: 120px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .info-value {
+            color: #2d3748;
+        }
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .upload-text {
+            font-size: 18px;
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+        .upload-hint {
+            font-size: 14px;
+            color: #718096;
+        }
+        .file-info {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: none;
+        }
+        .file-info.show {
+            display: block;
+        }
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .file-hash {
+            background: #1a202c;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background: #a0aec0;
+        }
+        .hash-display {
+            background: #1a202c;
+            color: #68d391;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 16px;
+            word-break: break-all;
+            margin: 30px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .alert-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏠 Fabric Escrow</div>
+            <div class="nav">
+                <span class="welcome">Welcome, <%= user.name %></span>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h1 style="color: #2d3748; margin-bottom: 30px; text-align: center;">📄 Property Verification</h1>
+
+            <div class="alert alert-info">
+                <strong>Information:</strong> Please upload a copy of your title deed to verify ownership of this property.
+            </div>
+
+            <div class="property-info">
+                <h2>Property Details</h2>
+                <div class="info-row">
+                    <div class="info-label">Property ID:</div>
+                    <div class="info-value"><%= property.id %></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Property Name:</div>
+                    <div class="info-value"><%= property.title %></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Address:</div>
+                    <div class="info-value"><%= property.location %></div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Price:</div>
+                    <div class="info-value"><%= property.price %> €</div>
+                </div>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📎</div>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-hint">PDF, PNG, JPG (max 10MB)</div>
+                <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <div class="file-name" id="fileName">No file selected</div>
+                <div class="file-hash" id="fileHash">Click UPLOAD to generate document hash</div>
+            </div>
+
+            <div class="hash-display hidden" id="hashDisplay">
+                Your document's hash is: <span id="finalHash"></span>
+            </div>
+
+            <form action="/property/<%= property.id %>/verify" method="POST" id="verifyForm">
+                <input type="hidden" name="titleDeed" id="titleDeedHash">
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="/dashboard" class="btn btn-secondary">BACK</a>
+                    <button type="submit" class="btn btn-primary" id="verifyBtn" disabled>VERIFY</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileHash = document.getElementById('fileHash');
+        const hashDisplay = document.getElementById('hashDisplay');
+        const finalHash = document.getElementById('finalHash');
+        const titleDeedHash = document.getElementById('titleDeedHash');
+        const verifyBtn = document.getElementById('verifyBtn');
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+            uploadArea.style.background = '#f7fafc';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#cbd5e0';
+            uploadArea.style.background = 'white';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#cbd5e0';
+            uploadArea.style.background = 'white';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        async function handleFile(file) {
+            fileName.textContent = `Selected file: ${file.name}`;
+            fileInfo.classList.add('show');
+
+            // Simuler le hash du document
+            const hash = await generateHash(file);
+            fileHash.textContent = `Document hash: ${hash}`;
+
+            hashDisplay.classList.remove('hidden');
+            finalHash.textContent = hash;
+            titleDeedHash.value = hash;
+            verifyBtn.disabled = false;
+        }
+
+        async function generateHash(file) {
+            // Simuler un hash de document (dans la réalité, on utiliserait une vraie fonction de hash)
+            const buffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex.substring(0, 66); // Garder une longueur raisonnable
+        }
+    </script>
+</body>
+</html>

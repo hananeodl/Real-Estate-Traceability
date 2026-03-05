@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session - <%= session.propertyTitle %> - Fabric Escrow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .nav a {
+            margin-left: 20px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+        .nav a:hover {
+            color: #667eea;
+        }
+        .welcome {
+            margin-right: 20px;
+            color: #333;
+        }
+        .progress-bar {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            margin: 30px 0;
+        }
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 50px;
+            right: 50px;
+            height: 4px;
+            background: #e2e8f0;
+            z-index: 1;
+        }
+        .step {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+        .step-circle {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: 4px solid #e2e8f0;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #718096;
+            background: white;
+        }
+        .step.active .step-circle {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        .step.completed .step-circle {
+            border-color: #48bb78;
+            background: #48bb78;
+            color: white;
+        }
+        .step-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .step.active .step-label {
+            color: #667eea;
+        }
+        .step.completed .step-label {
+            color: #48bb78;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            color: #2d3748;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .session-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px;
+            border-radius: 12px;
+            color: white;
+        }
+        .info-item {
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .info-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .action-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .action-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .action-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-completed {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .status-waiting {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+        .btn-secondary {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background: #a0aec0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        .alert-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+        .escrow-details {
+            background: #1a202c;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏠 Fabric Escrow</div>
+            <div class="nav">
+                <span class="welcome">Welcome, <%= user.name %></span>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </div>
+
+        <% if (locals.success) { %>
+            <div class="alert alert-success"><%= success %></div>
+        <% } %>
+        <% if (locals.info) { %>
+            <div class="alert alert-info"><%= info %></div>
+        <% } %>
+
+        <div class="progress-bar">
+            <h2 style="color: #2d3748; margin-bottom: 20px;">📊 Progression de la transaction</h2>
+            <div class="progress-steps">
+                <div class="step <%= ['offer_accepted', 'deposit_pending', 'deposit_paid', 'contract_uploaded', 'contract_signed', 'escrow_created', 'final_payment_made'].includes(session.status) ? 'completed' : '' %>">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Offre acceptée</div>
+                </div>
+                <div class="step <%= ['deposit_pending', 'deposit_paid', 'contract_uploaded', 'contract_signed', 'escrow_created', 'final_payment_made'].includes(session.status) ? 'completed' : '' %> <%= session.status === 'offer_accepted' ? 'active' : '' %>">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Dépôt de garantie</div>
+                </div>
+                <div class="step <%= ['deposit_paid', 'contract_uploaded', 'contract_signed', 'escrow_created', 'final_payment_made'].includes(session.status) ? 'completed' : '' %> <%= session.status === 'deposit_pending' ? 'active' : '' %>">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Dépôt payé</div>
+                </div>
+                <div class="step <%= ['contract_uploaded', 'contract_signed', 'escrow_created', 'final_payment_made'].includes(session.status) ? 'completed' : '' %> <%= session.status === 'deposit_paid' ? 'active' : '' %>">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Contrat</div>
+                </div>
+                <div class="step <%= ['contract_signed', 'escrow_created', 'final_payment_made'].includes(session.status) ? 'completed' : '' %> <%= session.status === 'contract_uploaded' ? 'active' : '' %>">
+                    <div class="step-circle">5</div>
+                    <div class="step-label">Contrat signé</div>
+                </div>
+                <div class="step <%= ['escrow_created', 'final_payment_made'].includes(session.status) ? 'completed' : '' %> <%= session.status === 'contract_signed' ? 'active' : '' %>">
+                    <div class="step-circle">6</div>
+                    <div class="step-label">Escrow créé</div>
+                </div>
+                <div class="step <%= session.status === 'final_payment_made' ? 'completed' : '' %> <%= session.status === 'escrow_created' ? 'active' : '' %>">
+                    <div class="step-circle">7</div>
+                    <div class="step-label">Paiement final</div>
+                </div>
+                <div class="step <%= session.status === 'completed' ? 'completed' : '' %>">
+                    <div class="step-circle">8</div>
+                    <div class="step-label">Terminé</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="session-info">
+            <div class="info-item">
+                <div class="info-label">Propriété</div>
+                <div class="info-value"><%= session.propertyTitle %></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Montant</div>
+                <div class="info-value"><%= session.amount %> €</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label"><%= user.type === 'seller' ? 'Acheteur' : 'Vendeur' %></div>
+                <div class="info-value"><%= user.type === 'seller' ? session.buyerName : session.sellerName %></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Statut</div>
+                <div class="info-value"><%= session.status.replace(/_/g, ' ') %></div>
+            </div>
+        </div>
+
+        <% if (user.type === 'seller') { %>
+            <!-- Actions pour le SELLER -->
+            <div class="card">
+                <h2>🔑 Actions vendeur</h2>
+
+                <!-- Étape 2: Demander un dépôt de garantie -->
+                <% if (session.status === 'offer_accepted' && !session.depositRequested) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">💰 Demander un dépôt de garantie</div>
+                            <div class="action-status status-pending">À faire</div>
+                        </div>
+                        <p style="color: #718096; margin-bottom: 20px;">Demandez un dépôt de garantie à l'acheteur pour sécuriser la transaction.</p>
+                        <form action="/session/<%= session.id %>/request-deposit" method="POST">
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Montant du dépôt (€)</label>
+                                    <input type="number" name="amount" value="<%= session.amount * 0.1 %>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Date limite</label>
+                                    <input type="date" name="deadline" value="<%= new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0] %>" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Demander le dépôt</button>
+                        </form>
+                    </div>
+                <% } %>
+
+                <!-- Étape 4: Uploader le contrat de vente -->
+                <% if (session.status === 'deposit_paid' && !session.contractHash) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">📄 Uploader le contrat de vente</div>
+                            <div class="action-status status-pending">À faire</div>
+                        </div>
+                        <form action="/session/<%= session.id %>/upload-contract" method="POST">
+                            <div class="form-group">
+                                <label>Hash du contrat</label>
+                                <input type="text" name="contractHash" value="contract_<%= Date.now() %>" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Uploader le contrat</button>
+                        </form>
+                    </div>
+                <% } %>
+
+                <!-- Étape 6: Créer l'escrow sur la blockchain -->
+                <% if (session.status === 'contract_signed' && !session.escrowId) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">🔗 Créer l'escrow sur la blockchain</div>
+                            <div class="action-status status-pending">À faire</div>
+                        </div>
+                        <form action="/session/<%= session.id %>/create-escrow" method="POST">
+                            <div class="form-group">
+                                <label>Hash du titre de propriété</label>
+                                <input type="text" name="titleHash" value="title_<%= Date.now() %>" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Créer l'escrow</button>
+                        </form>
+                    </div>
+                <% } %>
+
+                <!-- Affichage des infos blockchain -->
+                <% if (session.escrowId && escrowData) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">⛓️ Informations blockchain</div>
+                            <div class="action-status status-completed">Actif</div>
+                        </div>
+                        <div class="escrow-details">
+                            <pre><%= JSON.stringify(escrowData, null, 2) %></pre>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        <% } else { %>
+            <!-- Actions pour le BUYER -->
+            <div class="card">
+                <h2>🔑 Actions acheteur</h2>
+
+                <!-- Étape 3: Payer le dépôt de garantie -->
+                <% if (session.depositRequested && !session.depositPaid) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">💰 Payer le dépôt de garantie</div>
+                            <div class="action-status status-pending">À faire</div>
+                        </div>
+                        <p style="color: #718096; margin-bottom: 20px;">Montant à payer: <strong><%= session.depositAmount %> €</strong></p>
+                        <form action="/session/<%= session.id %>/pay-deposit" method="POST">
+                            <button type="submit" class="btn btn-success">Payer le dépôt</button>
+                        </form>
+                    </div>
+                <% } %>
+
+                <!-- Étape 5: Signer le contrat -->
+                <% if (session.contractHash && !session.signedContractHash) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">✍️ Signer le contrat</div>
+                            <div class="action-status status-pending">À faire</div>
+                        </div>
+                        <form action="/session/<%= session.id %>/sign-contract" method="POST">
+                            <div class="form-group">
+                                <label>Hash du contrat signé</label>
+                                <input type="text" name="signedContractHash" value="signed_<%= Date.now() %>" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Signer le contrat</button>
+                        </form>
+                    </div>
+                <% } %>
+
+                <!-- Étape 7: Déposer le paiement final -->
+                <% if (session.escrowId && !session.finalPaymentMade) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">💰 Déposer le paiement final</div>
+                            <div class="action-status status-pending">À faire</div>
+                        </div>
+                        <p style="color: #718096; margin-bottom: 20px;">Montant à payer: <strong><%= session.amount - (session.depositAmount || 0) %> €</strong></p>
+                        <form action="/session/<%= session.id %>/deposit-final" method="POST">
+                            <button type="submit" class="btn btn-success">Déposer le paiement final</button>
+                        </form>
+                    </div>
+                <% } %>
+
+                <!-- Affichage des infos blockchain -->
+                <% if (session.escrowId && escrowData) { %>
+                    <div class="action-card">
+                        <div class="action-header">
+                            <div class="action-title">⛓️ Informations blockchain</div>
+                            <div class="action-status status-completed">Actif</div>
+                        </div>
+                        <div class="escrow-details">
+                            <pre><%= JSON.stringify(escrowData, null, 2) %></pre>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+
+        <!-- Informations sur l'escrow blockchain -->
+        <% if (session.escrowId) { %>
+            <div class="card">
+                <h2>⛓️ Détails de l'escrow blockchain</h2>
+                <p><strong>ID de l'escrow:</strong> <%= session.escrowId %></p>
+                <% if (escrowData) { %>
+                    <div style="background: #1a202c; color: white; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                        <pre><%= JSON.stringify(escrowData, null, 2) %></pre>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/dashboard" class="btn btn-secondary">← Retour au dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

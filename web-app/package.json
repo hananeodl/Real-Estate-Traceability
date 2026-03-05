@@ -1,0 +1,22 @@
+{
+  "name": "fabric-escrow-web",
+  "version": "1.0.0",
+  "description": "Web interface for Fabric Escrow",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.4",
+    "ejs": "^3.1.10",
+    "express": "^4.22.1",
+    "express-session": "^1.19.0",
+    "fabric-ca-client": "~2.2.20",
+    "fabric-network": "~2.2.20",
+    "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
