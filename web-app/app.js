@@ -279,23 +279,27 @@ app.post('/offer/:offerId/accept', async (req, res) => {
         acceptedOffer.status = 'accepted';
 
         // Création de la session
-        const session = {
-            id: `session_${Date.now()}`,
-            propertyId: property.id,
-            propertyTitle: property.title,
-            sellerId: property.sellerId,
-            sellerName: property.sellerName,
-            buyerId: acceptedOffer.buyerId,
-            buyerName: acceptedOffer.buyerName,
-            amount: acceptedOffer.amount,
-            status: 'offer_accepted',
-            depositRequested: false,
-            depositPaid: false,
-            contractHash: null,
-            signedContractHash: null,
-            escrowId: null,
-            createdAt: new Date()
-        };
+           const session = {
+                id: `session_${Date.now()}`,
+                propertyId: property.id,
+                propertyTitle: property.title,
+                sellerId: property.sellerId,
+                sellerName: property.sellerName,
+                buyerId: acceptedOffer.buyerId,
+                buyerName: acceptedOffer.buyerName,
+                amount: acceptedOffer.amount,
+                status: 'offer_accepted',
+                depositRequested: false,
+                depositPaid: false,
+                depositAmount: 0,
+                depositDeadline: null,
+                depositReference: null, // Référence bancaire
+                depositConfirmedByBank: false,
+                finalPaymentMade: false,
+                finalPaymentReference: null,
+                escrowId: null,
+                createdAt: new Date()
+    };
         sessions.push(session);
 
         console.log(`✅ Session créée: ${session.id}`);
@@ -387,6 +391,7 @@ app.post('/session/:id/pay-deposit', (req, res) => {
     res.redirect(`/session/${req.params.id}`);
 });
 
+// Uploader le contrat de vente (seller)
 app.post('/session/:id/upload-contract', (req, res) => {
     if (!req.session.user || req.session.user.type !== 'seller') {
         return res.redirect('/login');
@@ -394,9 +399,10 @@ app.post('/session/:id/upload-contract', (req, res) => {
 
     const session = sessions.find(s => s.id === req.params.id);
     if (session && session.sellerId === req.session.user.id) {
+        // Le hash est maintenant généré côté client et envoyé dans req.body.contractHash
         session.contractHash = req.body.contractHash || `contract_${Date.now()}`;
         session.status = 'contract_uploaded';
-        console.log(`📄 Contrat uploadé pour session: ${session.id}`);
+        console.log(`📄 Contrat uploadé pour session: ${session.id} avec hash: ${session.contractHash}`);
     }
 
     res.redirect(`/session/${req.params.id}`);
@@ -427,9 +433,11 @@ app.post('/session/:id/create-escrow', async (req, res) => {
         const escrowId = `escrow_${Date.now()}`;
         console.log(`🔗 Création escrow: ${escrowId}`);
 
+        // Le seller est l'utilisateur connecté (seller)
         const result = await fabricClient.createEscrow(
             escrowId,
-            session.buyerId,
+            session.buyerId,  // buyer
+            req.session.user.id, // seller (l'utilisateur connecté)
             session.amount,
             req.body.titleHash || `title_${Date.now()}`
         );
@@ -500,6 +508,32 @@ app.post('/property/:id/verify', (req, res) => {
     res.redirect('/dashboard');
 });
 
+
+// Simuler un virement bancaire (dans un cas réel, ce serait une API bancaire)
+app.post('/session/:id/bank-transfer', (req, res) => {
+    if (!req.session.user || req.session.user.type !== 'buyer') {
+        return res.redirect('/login');
+    }
+
+    const session = sessions.find(s => s.id === req.params.id);
+    if (!session || session.buyerId !== req.session.user.id) {
+        return res.redirect('/dashboard');
+    }
+
+    // Simuler une confirmation bancaire
+    const bankReference = `BNK${Date.now()}`;
+    session.depositReference = bankReference;
+    session.depositConfirmedByBank = true;
+    session.depositPaid = true;
+    session.status = 'deposit_paid';
+
+    console.log(`🏦 Virement bancaire confirmé: ${bankReference} pour session ${session.id}`);
+
+    // Mettre à jour le statut dans la blockchain
+    // (vous pouvez ajouter un appel à votre chaincode ici)
+
+    res.redirect(`/session/${session.id}`);
+});
 
 
 // ============================================

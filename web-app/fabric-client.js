@@ -156,7 +156,7 @@ async enrollUser(org, userId, userType) {
     /**
      * Connect to the network as a specific user
      */
-    async connect(userId) {
+async connect(userId) {
     try {
         console.log(`🔌 Connecting as ${userId}...`);
 
@@ -175,19 +175,18 @@ async enrollUser(org, userId, userType) {
 
         this.gateway = new Gateway();
 
-        // Désactiver la découverte et utiliser localhost
+        // DÉSACTIVER LA DÉCOUVERTE
         const connectOptions = {
             wallet: this.wallet,
             identity: userId,
             discovery: {
-                enabled: false,  // Désactiver la découverte
+                enabled: false,
                 asLocalhost: true
             }
         };
 
         await this.gateway.connect(ccp, connectOptions);
 
-        // Obtenir le réseau et le contrat
         this.network = await this.gateway.getNetwork('mychannel');
         this.contract = this.network.getContract('escrow');
         this.currentUser = userId;
@@ -215,24 +214,46 @@ async enrollUser(org, userId, userType) {
     /**
      * Create a new escrow (Seller only)
      */
-    async createEscrow(escrowId, buyer, amount, propertyHash) {
-        try {
-            console.log(`📝 Creating escrow ${escrowId}...`);
-            const result = await this.contract.submitTransaction(
-                'CreateEscrow',
-                escrowId,
-                buyer,
-                amount.toString(),
-                propertyHash
-            );
-            console.log(`✅ Escrow ${escrowId} created`);
-            return { success: true, message: result.toString() };
-        } catch (error) {
-            console.error(`❌ Failed to create escrow: ${error}`);
-            return { success: false, error: error.message };
-        }
-    }
+async createEscrow(escrowId, buyer, seller, amount, propertyHash) {
+    try {
+        console.log(`📝 Creating escrow ${escrowId}...`);
 
+        // Utiliser l'admin pour soumettre la transaction
+        const adminIdentity = await this.wallet.get('admin');
+        if (!adminIdentity) {
+            return { success: false, error: 'Admin not found in wallet' };
+        }
+
+        const adminCcp = await this.loadConnectionProfile(1); // Forcer Org1
+
+        const adminGateway = new Gateway();
+        await adminGateway.connect(adminCcp, {
+            wallet: this.wallet,
+            identity: 'admin',
+            discovery: { enabled: false, asLocalhost: true }
+        });
+
+        const adminNetwork = await adminGateway.getNetwork('mychannel');
+        const adminContract = adminNetwork.getContract('escrow');
+
+        const result = await adminContract.submitTransaction(
+            'CreateEscrow',
+            escrowId,
+            buyer,
+            seller,
+            String(amount),
+            propertyHash
+        );
+
+        await adminGateway.disconnect();
+
+        console.log(`✅ Escrow ${escrowId} created`);
+        return { success: true, message: result.toString() };
+    } catch (error) {
+        console.error(`❌ Failed to create escrow: ${error}`);
+        return { success: false, error: error.message };
+    }
+}
     /**
      * Query an escrow
      */

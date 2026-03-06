@@ -21,14 +21,15 @@ type Escrow struct {
 	Amount    float64   `json:"amount"`
 	Status    string    `json:"status"`
 	TitleHash string    `json:"titleHash"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	CreatedAt string    `json:"createdAt"` // Changed to string to ensure determinism
+	UpdatedAt string    `json:"updatedAt"` // Changed to string
 }
 
-// CreateEscrow - Initialise un nouvel escrow
+// CreateEscrow - Deterministic version using transaction timestamp
 func (e *EscrowContract) CreateEscrow(ctx contractapi.TransactionContextInterface,
-	id string, seller string, amount float64, titleHash string) error {
+	id string, buyer string, seller string, amount float64, titleHash string) error {
 
+	// Vérifier si l'escrow existe déjà
 	exists, err := e.EscrowExists(ctx, id)
 	if err != nil {
 		return err
@@ -37,20 +38,25 @@ func (e *EscrowContract) CreateEscrow(ctx contractapi.TransactionContextInterfac
 		return fmt.Errorf("escrow %s already exists", id)
 	}
 
-	buyerID, err := ctx.GetClientIdentity().GetID()
+	// Get transaction timestamp from stub (deterministic - same for all peers)
+	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
 	if err != nil {
-		return fmt.Errorf("failed to get client identity: %v", err)
+		return fmt.Errorf("failed to get transaction timestamp: %v", err)
 	}
 
+	// Convert to ISO string for consistency
+	timestamp := time.Unix(txTimestamp.Seconds, int64(txTimestamp.Nanos)).Format(time.RFC3339Nano)
+
+	// Créer l'escrow avec le timestamp de la transaction
 	escrow := Escrow{
 		ID:        id,
-		Buyer:     buyerID,
+		Buyer:     buyer,
 		Seller:    seller,
 		Amount:    amount,
 		Status:    "CREATED",
 		TitleHash: titleHash,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: timestamp,
+		UpdatedAt: timestamp,
 	}
 
 	escrowJSON, err := json.Marshal(escrow)
@@ -61,7 +67,7 @@ func (e *EscrowContract) CreateEscrow(ctx contractapi.TransactionContextInterfac
 	return ctx.GetStub().PutState(id, escrowJSON)
 }
 
-// QueryEscrow - Récupère un escrow par son ID
+// QueryEscrow - Récupère un escrow
 func (e *EscrowContract) QueryEscrow(ctx contractapi.TransactionContextInterface, id string) (*Escrow, error) {
 	escrowJSON, err := ctx.GetStub().GetState(id)
 	if err != nil {

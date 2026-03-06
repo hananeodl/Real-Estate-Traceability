@@ -376,19 +376,35 @@
                     </div>
                 <% } %>
 
-                <!-- Étape 4: Uploader le contrat de vente -->
+                <!-- Uploader le contrat de vente (seller) -->
                 <% if (session.status === 'deposit_paid' && !session.contractHash) { %>
                     <div class="action-card">
                         <div class="action-header">
                             <div class="action-title">📄 Uploader le contrat de vente</div>
                             <div class="action-status status-pending">À faire</div>
                         </div>
-                        <form action="/session/<%= session.id %>/upload-contract" method="POST">
-                            <div class="form-group">
-                                <label>Hash du contrat</label>
-                                <input type="text" name="contractHash" value="contract_<%= Date.now() %>" required>
+
+                        <div class="upload-area" id="contractUploadArea" style="border: 3px dashed #cbd5e0; border-radius: 15px; padding: 30px; text-align: center; margin-bottom: 20px; cursor: pointer;">
+                            <div style="font-size: 48px; color: #667eea; margin-bottom: 15px;">📎</div>
+                            <div style="font-size: 18px; color: #4a5568; margin-bottom: 10px;">Cliquez pour uploader ou glissez-déposez</div>
+                            <div style="font-size: 14px; color: #718096;">PDF, DOC, DOCX (max 10MB)</div>
+                            <input type="file" id="contractFile" accept=".pdf,.doc,.docx" style="display: none;">
+                        </div>
+
+                        <div class="file-info" id="contractFileInfo" style="display: none;">
+                            <div style="background: #f7fafc; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                                <div style="font-weight: 600; margin-bottom: 10px;" id="contractFileName">Fichier sélectionné</div>
+                                <div style="background: #1a202c; color: #68d391; padding: 15px; border-radius: 8px; font-family: monospace; word-break: break-all;" id="contractFileHash">
+                                    Génération du hash...
+                                </div>
                             </div>
-                            <button type="submit" class="btn btn-primary">Uploader le contrat</button>
+                        </div>
+
+                        <form action="/session/<%= session.id %>/upload-contract" method="POST" id="contractUploadForm">
+                            <input type="hidden" name="contractHash" id="contractHashInput">
+                            <button type="submit" class="btn btn-primary" id="contractSubmitBtn" style="width: 100%;" disabled>
+                                Uploader le contrat
+                            </button>
                         </form>
                     </div>
                 <% } %>
@@ -441,6 +457,73 @@
                         </form>
                     </div>
                 <% } %>
+                <!-- Instructions de virement bancaire -->
+                <% if (session.depositRequested && !session.depositPaid) { %>
+                    <div class="action-card" style="background: #f0f9ff; border: 2px solid #3b82f6;">
+                        <div class="action-header">
+                            <div class="action-title">🏦 Instructions de virement</div>
+                            <div class="action-status status-pending">En attente</div>
+                        </div>
+
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 15px 0;">
+                            <h3 style="margin-bottom: 15px;">Coordonnées bancaires du compte séquestre</h3>
+
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 8px; font-weight: 600;">Banque :</td>
+                                    <td style="padding: 8px;">Crédit Immobilier</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; font-weight: 600;">Titulaire :</td>
+                                    <td style="padding: 8px;">Fabric Escrow Services</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; font-weight: 600;">IBAN :</td>
+                                    <td style="padding: 8px;">FR76 1234 5678 9012 3456 7890 123</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; font-weight: 600;">BIC :</td>
+                                    <td style="padding: 8px;">CREDITPARIS</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; font-weight: 600;">Montant :</td>
+                                    <td style="padding: 8px; font-size: 18px; font-weight: bold;"><%= session.depositAmount %> €</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px; font-weight: 600;">Référence à indiquer :</td>
+                                    <td style="padding: 8px;"><code style="background: #1a202c; color: #68d391; padding: 5px 10px; border-radius: 5px;"><%= session.id %></code></td>
+                                </tr>
+                            </table>
+
+                            <div style="background: #fef3c7; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                                <p style="color: #92400e; font-size: 14px;">
+                                    ⚠️ Le virement doit être effectué depuis un compte au nom de <strong><%= user.name %></strong>.
+                                    La transaction sera automatiquement validée après réception des fonds.
+                                </p>
+                            </div>
+                        </div>
+
+                            <!-- Formulaire pour simuler la réception du virement -->
+                            <form action="/session/<%= session.id %>/bank-transfer" method="POST">
+                                <button type="submit" class="btn btn-primary" style="background: #3b82f6; width: 100%;">
+                                    Simuler la réception du virement
+                                </button>
+                            </form>
+                        </div>
+                    <% } %>
+
+                    <!-- Confirmation de dépôt -->
+                    <% if (session.depositPaid) { %>
+                        <div class="action-card" style="background: #e6f7e6;">
+                            <div class="action-header">
+                                <div class="action-title">✅ Dépôt confirmé</div>
+                                <div class="action-status status-completed">Payé</div>
+                            </div>
+                            <p><strong>Montant :</strong> <%= session.depositAmount %> €</p>
+                            <p><strong>Référence bancaire :</strong> <%= session.depositReference || 'N/A' %></p>
+                            <p><strong>Date :</strong> <%= new Date().toLocaleString() %></p>
+                        </div>
+                    <% } %>
 
                 <!-- Étape 5: Signer le contrat -->
                 <% if (session.contractHash && !session.signedContractHash) { %>
@@ -449,12 +532,20 @@
                             <div class="action-title">✍️ Signer le contrat</div>
                             <div class="action-status status-pending">À faire</div>
                         </div>
-                        <form action="/session/<%= session.id %>/sign-contract" method="POST">
-                            <div class="form-group">
-                                <label>Hash du contrat signé</label>
-                                <input type="text" name="signedContractHash" value="signed_<%= Date.now() %>" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Signer le contrat</button>
+
+                        <p style="margin-bottom: 15px;">Hash du contrat à signer: <code><%= session.contractHash %></code></p>
+
+                        <div class="upload-area" id="signatureUploadArea" style="border: 3px dashed #cbd5e0; border-radius: 15px; padding: 30px; text-align: center; margin-bottom: 20px; cursor: pointer;">
+                            <div style="font-size: 48px; color: #667eea; margin-bottom: 15px;">✍️</div>
+                            <div style="font-size: 18px; color: #4a5568; margin-bottom: 10px;">Uploader votre signature (PDF)</div>
+                            <input type="file" id="signatureFile" accept=".pdf,.jpg,.png" style="display: none;">
+                        </div>
+
+                        <form action="/session/<%= session.id %>/sign-contract" method="POST" id="signatureUploadForm">
+                            <input type="hidden" name="signedContractHash" id="signedContractHashInput">
+                            <button type="submit" class="btn btn-primary" id="signatureSubmitBtn" style="width: 100%;" disabled>
+                                Signer le contrat
+                            </button>
                         </form>
                     </div>
                 <% } %>
@@ -505,5 +596,102 @@
             <a href="/dashboard" class="btn btn-secondary">← Retour au dashboard</a>
         </div>
     </div>
+        <script>
+            // Gestionnaire pour l'upload du contrat
+            const contractUploadArea = document.getElementById('contractUploadArea');
+            const contractFile = document.getElementById('contractFile');
+            const contractFileInfo = document.getElementById('contractFileInfo');
+            const contractFileName = document.getElementById('contractFileName');
+            const contractFileHash = document.getElementById('contractFileHash');
+            const contractHashInput = document.getElementById('contractHashInput');
+            const contractSubmitBtn = document.getElementById('contractSubmitBtn');
+
+            if (contractUploadArea) {
+                contractUploadArea.addEventListener('click', () => {
+                    contractFile.click();
+                });
+
+                contractUploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    contractUploadArea.style.borderColor = '#667eea';
+                    contractUploadArea.style.background = '#f7fafc';
+                });
+
+                contractUploadArea.addEventListener('dragleave', () => {
+                    contractUploadArea.style.borderColor = '#cbd5e0';
+                    contractUploadArea.style.background = 'white';
+                });
+
+                contractUploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    contractUploadArea.style.borderColor = '#cbd5e0';
+                    contractUploadArea.style.background = 'white';
+
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        handleContractFile(files[0]);
+                    }
+                });
+
+                contractFile.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        handleContractFile(e.target.files[0]);
+                    }
+                });
+            }
+
+            async function handleContractFile(file) {
+                contractFileName.textContent = `Fichier sélectionné: ${file.name}`;
+                contractFileInfo.style.display = 'block';
+                contractFileHash.textContent = 'Génération du hash...';
+
+                // Générer le hash du fichier
+                const hash = await generateFileHash(file);
+                contractFileHash.textContent = `Hash: ${hash}`;
+                contractHashInput.value = hash;
+                contractSubmitBtn.disabled = false;
+            }
+
+            async function generateFileHash(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = async function(e) {
+                        const buffer = e.target.result;
+                        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+                        const hashArray = Array.from(new Uint8Array(hashBuffer));
+                        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                        resolve('0x' + hashHex);
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            // Gestionnaire pour la signature
+                const signatureUploadArea = document.getElementById('signatureUploadArea');
+                const signatureFile = document.getElementById('signatureFile');
+                const signedContractHashInput = document.getElementById('signedContractHashInput');
+                const signatureSubmitBtn = document.getElementById('signatureSubmitBtn');
+
+                if (signatureUploadArea) {
+                    signatureUploadArea.addEventListener('click', () => {
+                        signatureFile.click();
+                    });
+
+                    signatureFile.addEventListener('change', (e) => {
+                        if (e.target.files.length > 0) {
+                            handleSignatureFile(e.target.files[0]);
+                        }
+                    });
+                }
+
+                async function handleSignatureFile(file) {
+                    // Générer le hash du fichier de signature
+                    const hash = await generateFileHash(file);
+                    signedContractHashInput.value = hash;
+                    signatureSubmitBtn.disabled = false;
+
+                    // Afficher un message de confirmation
+                    alert(`Signature chargée avec succès! Hash: ${hash}`);
+                }
+        </script>
 </body>
 </html>
