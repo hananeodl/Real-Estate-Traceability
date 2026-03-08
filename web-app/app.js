@@ -93,7 +93,7 @@ app.post('/login', async (req, res) => {
                 });
             }
         } catch (error) {
-            console.error('💥 Erreur:', error);
+            console.error(' Erreur:', error);
             res.render('login', {
                 error: 'Erreur technique: ' + error.message,
                 id: id
@@ -126,6 +126,10 @@ app.get('/dashboard', async (req, res) => {
     const result = await fabricClient.getAllEscrows();
     const allEscrows = result.success ? result.data : [];
 
+    // Récupérer les transactions complétées
+    const completedResult = await fabricClient.getCompletedTransactions(user.id);
+    const completedTransactions = completedResult.success ? completedResult.data : [];
+
     const myEscrows = allEscrows.filter(e =>
         user.type === 'buyer' ? e.Buyer === user.id : e.Seller === user.id
     );
@@ -138,12 +142,12 @@ app.get('/dashboard', async (req, res) => {
         user,
         properties: user.type === 'seller' ? myProperties : availableProperties,
         escrows: myEscrows,
+        completedTransactions: completedTransactions,
         sessions: sessions.filter(s =>
             user.type === 'seller' ? s.sellerId === user.id : s.buyerId === user.id
         )
     });
 });
-
 // ============================================
 // ROUTES PROPRIÉTÉS
 // ============================================
@@ -520,7 +524,6 @@ app.post('/session/:id/bank-transfer', (req, res) => {
         return res.redirect('/dashboard');
     }
 
-    // Simuler une confirmation bancaire
     const bankReference = `BNK${Date.now()}`;
     session.depositReference = bankReference;
     session.depositConfirmedByBank = true;
@@ -529,12 +532,121 @@ app.post('/session/:id/bank-transfer', (req, res) => {
 
     console.log(`🏦 Virement bancaire confirmé: ${bankReference} pour session ${session.id}`);
 
-    // Mettre à jour le statut dans la blockchain
-    // (vous pouvez ajouter un appel à votre chaincode ici)
-
     res.redirect(`/session/${session.id}`);
 });
 
+
+//app.post('/session/:id/complete-transaction', async (req, res) => {
+//    if (!req.session.user) {
+//        return res.redirect('/login');
+//    }
+//
+//    const session = sessions.find(s => s.id === req.params.id);
+//    if (!session) {
+//        return res.redirect('/dashboard');
+//    }
+//
+//    // Vérifier que l'utilisateur est soit le buyer soit le seller
+//    if (session.sellerId !== req.session.user.id && session.buyerId !== req.session.user.id) {
+//        return res.redirect('/dashboard');
+//    }
+//
+//    // Vérifier que le paiement final a été fait
+//    if (session.status !== 'final_payment_made') {
+//        return res.redirect(`/session/${req.params.id}`);
+//    }
+//
+//    console.log(`\n🚀 DÉBUT DE LA FINALISATION POUR LA SESSION ${session.id}`);
+//
+//    // Appeler la fonction mockée de finalisation
+//    const result = await fabricClient.completeEscrow(session.escrowId, session.propertyId);
+//
+//    if (result.success) {
+//        session.status = 'completed';
+//        session.completedAt = new Date();
+//        session.blockchainData = result.data;
+//        console.log(`✅ Session ${session.id} marquée comme terminée`);
+//    }
+//
+//    res.redirect(`/session/${req.params.id}`);
+//});
+
+// Route pour voir les détails blockchain
+app.get('/session/:id/blockchain-details', async (req, res) => {
+    if (!req.session.user) {
+        return res.json({ error: 'Non authentifié' });
+    }
+
+    const session = sessions.find(s => s.id === req.params.id);
+    if (!session) {
+        return res.json({ error: 'Session non trouvée' });
+    }
+
+    const result = await fabricClient.getEscrowDetails(session.escrowId);
+    res.json(result);
+});
+
+// ============================================
+// FINALISATION DE LA TRANSACTION
+// ============================================
+
+app.post('/session/:id/complete-transaction', async (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');
+    }
+
+    const session = sessions.find(s => s.id === req.params.id);
+    if (!session) {
+        return res.redirect('/dashboard');
+    }
+
+    // Vérifier que l'utilisateur est soit le buyer soit le seller
+    if (session.sellerId !== req.session.user.id && session.buyerId !== req.session.user.id) {
+        return res.redirect('/dashboard');
+    }
+
+    // Vérifier que le paiement final a été fait
+    if (session.status !== 'final_payment_made') {
+        return res.redirect(`/session/${req.params.id}`);
+    }
+
+    console.log(`\n🚀 DÉBUT DE LA FINALISATION POUR LA SESSION ${session.id}`);
+
+    // Appeler la fonction de finalisation
+    const result = await fabricClient.completeEscrow(
+        session.escrowId,
+        session.propertyId,
+        {
+            propertyTitle: session.propertyTitle,
+            buyerId: session.buyerId,
+            buyerName: session.buyerName,
+            sellerId: session.sellerId,
+            sellerName: session.sellerName,
+            amount: session.amount,
+            depositAmount: session.depositAmount
+        }
+    );
+
+    if (result.success) {
+        session.status = 'completed';
+        session.completedAt = new Date();
+        session.blockchainData = result.data;
+        console.log(`✅ Session ${session.id} marquée comme terminée`);
+        console.log(`✅ Transaction enregistrée dans l'historique blockchain`);
+    }
+
+    res.redirect(`/session/${req.params.id}`);
+});
+
+// Route pour obtenir toutes les transactions complétées
+app.get('/api/completed-transactions', async (req, res) => {
+    if (!req.session.user) {
+        return res.json({ success: false, error: 'Non authentifié' });
+    }
+
+    const result = await fabricClient.getCompletedTransactions(req.session.user.id);
+    res.json(result);
+});
 
 // ============================================
 // DÉMARRAGE SERVEUR

@@ -200,6 +200,56 @@
             font-size: 12px;
             margin-left: 5px;
         }
+        .transaction-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .completed-transactions {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .completed-transactions::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .completed-transactions::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .completed-transactions::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .completed-transactions::-webkit-scrollbar-thumb:hover {
+            background: #5a67d8;
+        }
+
+        details summary {
+            list-style: none;
+        }
+
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details summary::before {
+            content: '▶';
+            margin-right: 5px;
+            transition: transform 0.3s;
+        }
+
+        details[open] summary::before {
+            content: '▼';
+        }
     </style>
 </head>
 <body>
@@ -388,36 +438,95 @@
         </div>
 
         <!-- Section : Escrows blockchain -->
-        <div class="section">
-            <h2>🔗 Escrows blockchain</h2>
+<div class="section">
+    <h2>🔗 Escrows blockchain</h2>
 
-            <% if (escrows && escrows.length > 0) { %>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Statut</th>
-                            <th>Montant</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% escrows.forEach(escrow => { %>
-                            <tr>
-                                <td><%= escrow.ID || escrow.id %></td>
-                                <td>
-                                    <span class="status-badge status-<%= (escrow.Status || escrow.status || '').toLowerCase() %>">
-                                        <%= escrow.Status || escrow.status || 'Inconnu' %>
+    <% if (escrows && escrows.length > 0) { %>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Statut</th>
+                    <th>Montant</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% escrows.forEach(escrow => { %>
+                    <tr>
+                        <td><%= escrow.ID || escrow.id %></td>
+                        <td>
+                            <span class="status-badge status-<%= (escrow.Status || escrow.status || '').toLowerCase() %>">
+                                <%= escrow.Status || escrow.status || 'Inconnu' %>
+                            </span>
+                        </td>
+                        <td><%= escrow.Amount || escrow.amount || 0 %> €</td>
+                        <td>
+                            <a href="/session/<%= escrow.ID || escrow.id %>" class="btn-small" style="background: #667eea;">Voir</a>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } %>
+
+            <!--  SECTION : Transactions complétées -->
+            <% if (completedTransactions && completedTransactions.length > 0) { %>
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #2d3748;">📜 Historique des transactions finalisées</h3>
+                <div class="completed-transactions">
+                    <% completedTransactions.forEach(tx => { %>
+                        <div class="transaction-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px; font-size: 12px;">
+                                        ✅ COMPLETED
                                     </span>
-                                </td>
-                                <td><%= escrow.Amount || escrow.amount || 0 %> €</td>
-                                <td>
-                                    <a href="/session/<%= escrow.ID || escrow.id %>" class="btn-small" style="background: #667eea;">Voir</a>
-                                </td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
+                                    <span style="font-size: 14px;"><%= tx.propertyTitle %></span>
+                                </div>
+                                <span style="font-weight: bold;"><%= tx.amount %> €</span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <div>
+                                    <div style="font-size: 12px; opacity: 0.8;">Acheteur</div>
+                                    <div style="font-weight: 600;"><%= tx.buyerName %></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; opacity: 0.8;">Vendeur</div>
+                                    <div style="font-weight: 600;"><%= tx.sellerName %></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; opacity: 0.8;">Dépôt</div>
+                                    <div><%= tx.depositAmount %> €</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 12px; opacity: 0.8;">Final</div>
+                                    <div><%= tx.finalAmount %> €</div>
+                                </div>
+                            </div>
+
+                            <div style="background: #1a202c; color: #68d391; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>Block #<%= tx.blockNumber %></span>
+                                    <span><%= new Date(tx.completedAt).toLocaleString() %></span>
+                                </div>
+                                <div style="word-break: break-all; margin-bottom: 5px;">
+                                    Tx: <%= tx.transactionHash.substring(0, 30) %>...
+                                </div>
+                                <div style="word-break: break-all;">
+                                    Contract: <%= tx.contractHash.substring(0, 30) %>...
+                                </div>
+                            </div>
+
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; color: rgba(255,255,255,0.8);">Détails blockchain</summary>
+                                <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; font-size: 12px;">
+                                    <pre style="color: #a0aec0; overflow-x: auto;"><%= JSON.stringify(tx.details, null, 2) %></pre>
+                                </div>
+                            </details>
+                        </div>
+                    <% }) %>
+                </div>
             <% } else { %>
                 <div class="empty-state">
                     <p>Aucun escrow sur la blockchain</p>

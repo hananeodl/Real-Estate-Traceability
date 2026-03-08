@@ -30,7 +30,7 @@ func main() {
 	}
 	defer client.Close()
 
-	// Example usage - Create an escrow
+	// Create an escrow
 	err = client.CreateEscrow("ESCROW001", "Org2MSP", 100000.0, "property-hash-123")
 	if err != nil {
 		log.Printf("Failed to create escrow: %v", err)
@@ -44,7 +44,7 @@ func main() {
 		log.Printf("Escrow details: %s", escrow)
 	}
 
-	// Example: Deposit funds
+	// Deposit funds
 	err = client.DepositFunds("ESCROW001", "property-hash-123")
 	if err != nil {
 		log.Printf("Failed to deposit funds: %v", err)
@@ -98,7 +98,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-// Close closes the gateway connection
+// Close the gateway connection
 func (c *Client) Close() {
 	if c.gateway != nil {
 		c.gateway.Close()

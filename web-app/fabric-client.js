@@ -11,6 +11,7 @@ class FabricClient {
         this.network = null;
         this.wallet = null;
         this.currentUser = null;
+        this.completedTransactions = [];
     }
 
     /**
@@ -259,6 +260,7 @@ async createEscrow(escrowId, buyer, seller, amount, propertyHash) {
      */
     async queryEscrow(escrowId) {
         try {
+                console.log(`📋 Returning escrow for ${escrowId}`);
             const result = await this.contract.evaluateTransaction('QueryEscrow', escrowId);
             return { success: true, data: JSON.parse(result.toString()) };
         } catch (error) {
@@ -271,6 +273,7 @@ async createEscrow(escrowId, buyer, seller, amount, propertyHash) {
      */
     async getAllEscrows() {
         try {
+            console.log(`📋 Returning escrows`);
             const result = await this.contract.evaluateTransaction('GetAllEscrows');
             return { success: true, data: JSON.parse(result.toString()) };
         } catch (error) {
@@ -303,6 +306,257 @@ async createEscrow(escrowId, buyer, seller, amount, propertyHash) {
             return { success: false, error: error.message };
         }
     }
+
+// ============================================
+// FONCTIONS FINALES
+// ============================================
+
+async completeEscrow(escrowId, propertyId, sessionDetails) {
+    try {
+        console.log(`\n🚀 Finalisation de l'escrow ${escrowId} sur la blockchain...`);
+
+        // Vérifier que le contract est initialisé
+        if (!this.contract) {
+            throw new Error('Client non connecté à la blockchain');
+        }
+
+        // Appeler la fonction du chaincode pour finaliser l'escrow
+        const result = await this.contract.submitTransaction(
+            'CompleteEscrow',
+            escrowId,
+            propertyId,
+            JSON.stringify({
+                buyerId: sessionDetails.buyerId,
+                sellerId: sessionDetails.sellerId,
+                finalAmount: sessionDetails.amount - (sessionDetails.depositAmount || 0),
+                depositAmount: sessionDetails.depositAmount || 0,
+                propertyTitle: sessionDetails.propertyTitle
+            })
+        );
+
+        // Parse the result
+        const txResult = JSON.parse(result.toString());
+
+        console.log(`✅ Escrow ${escrowId} finalisé avec succès sur la blockchain`);
+
+        return {
+            success: true,
+            data: txResult
+        };
+
+    } catch (error) {
+        console.error(`❌ Erreur de finalisation sur la blockchain: ${error}`);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Get escrow details directly from the blockchain
+ */
+async getEscrowDetails(escrowId) {
+    try {
+        console.log(`🔍 Récupération des détails pour l'escrow: ${escrowId}`);
+
+        // Vérifier que le contract est initialisé
+        if (!this.contract) {
+            throw new Error('Client non connecté à la blockchain');
+        }
+
+        // Appeler la fonction QueryEscrow du chaincode
+        const result = await this.contract.evaluateTransaction(
+            'QueryEscrow',
+            escrowId
+        );
+
+        // Parse the result
+        const escrowData = JSON.parse(result.toString());
+
+        console.log(`✅ Détails récupérés pour l'escrow ${escrowId}`);
+
+        return {
+            success: true,
+            data: {
+                id: escrowData.ID || escrowData.id,
+                buyer: escrowData.Buyer || escrowData.buyer,
+                seller: escrowData.Seller || escrowData.seller,
+                amount: escrowData.Amount || escrowData.amount,
+                status: escrowData.Status || escrowData.status,
+                titleHash: escrowData.TitleHash || escrowData.titleHash,
+                depositPaid: escrowData.DepositPaid || false,
+                depositReference: escrowData.DepositReference,
+                depositConfirmedByBank: escrowData.DepositConfirmedByBank || false,
+                finalPaymentMade: escrowData.FinalPaymentMade || false,
+                finalPaymentReference: escrowData.FinalPaymentReference,
+                createdAt: escrowData.CreatedAt || escrowData.createdAt,
+                updatedAt: escrowData.UpdatedAt || escrowData.updatedAt
+            }
+        };
+
+    } catch (error) {
+        console.error(`❌ Erreur lors de la récupération de l'escrow ${escrowId}:`, error);
+
+        if (error.message.includes('does not exist')) {
+            return {
+                success: false,
+                error: `L'escrow ${escrowId} n'existe pas`
+            };
+        }
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+
+/**
+ * Get completed transactions for a user
+ */
+async getCompletedTransactions(userId) {
+    try {
+        console.log(`🔍 Récupération des transactions complétées pour ${userId}`);
+
+        // récupérer tous les escrows
+        const result = await this.getAllEscrows();
+
+        if (!result.success) {
+            return { success: false, data: [], error: result.error };
+        }
+
+        // Filtrer ceux qui sont complétés et où l'utilisateur est impliqué
+        const completedTx = result.data.filter(escrow =>
+            (escrow.Status === 'COMPLETED' || escrow.status === 'COMPLETED') &&
+            (escrow.Buyer === userId || escrow.Seller === userId ||
+             escrow.buyer === userId || escrow.seller === userId)
+        );
+
+        console.log(`✅ ${completedTx.length} transactions complétées trouvées`);
+
+        return {
+            success: true,
+            data: completedTx
+        };
+
+    } catch (error) {
+        console.error(`❌ Erreur: ${error}`);
+        return {
+            success: false,
+            data: [],
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Get transaction details from blockchain
+ */
+async getTransactionDetails(escrowId) {
+    // Cette fonction est un alias de getEscrowDetails
+    return this.getEscrowDetails(escrowId);
+}
+
+/**
+ * Transfer property ownership on the blockchain
+ */
+async transferProperty(escrowId, propertyId, newOwnerId) {
+    try {
+        console.log(`📝 Transfert de propriété ${propertyId} à ${newOwnerId}...`);
+
+        if (!this.contract) {
+            throw new Error('Client non connecté à la blockchain');
+        }
+
+        const result = await this.contract.submitTransaction(
+            'TransferProperty',
+            escrowId,
+            propertyId,
+            newOwnerId
+        );
+
+        console.log(`✅ Propriété ${propertyId} transférée avec succès`);
+
+        return {
+            success: true,
+            message: result.toString()
+        };
+
+    } catch (error) {
+        console.error(`❌ Erreur de transfert: ${error}`);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Archive contract hash in the escrow record
+ */
+async archiveContract(escrowId, contractHash) {
+    try {
+        console.log(`📝 Archivage du contrat ${contractHash} pour l'escrow ${escrowId}...`);
+
+        if (!this.contract) {
+            throw new Error('Client non connecté à la blockchain');
+        }
+
+        const result = await this.contract.submitTransaction(
+            'ArchiveContract',
+            escrowId,
+            contractHash
+        );
+
+        console.log(`✅ Contrat archivé avec succès`);
+
+        return {
+            success: true,
+            message: result.toString()
+        };
+
+    } catch (error) {
+        console.error(`❌ Erreur d'archivage: ${error}`);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Update escrow status on blockchain
+ */
+async updateEscrowStatus(escrowId, newStatus) {
+    try {
+        console.log(`📝 Mise à jour du statut de l'escrow ${escrowId} vers ${newStatus}...`);
+
+        if (!this.contract) {
+            throw new Error('Client non connecté à la blockchain');
+        }
+
+        const result = await this.contract.submitTransaction(
+            'UpdateEscrowStatus',
+            escrowId,
+            newStatus
+        );
+
+        console.log(`✅ Statut mis à jour avec succès`);
+
+        return {
+            success: true,
+            message: result.toString()
+        };
+
+    } catch (error) {
+        console.error(`❌ Erreur de mise à jour: ${error}`);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
 }
 
 module.exports = FabricClient;

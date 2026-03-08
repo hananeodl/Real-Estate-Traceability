@@ -21,11 +21,11 @@ type Escrow struct {
 	Amount    float64   `json:"amount"`
 	Status    string    `json:"status"`
 	TitleHash string    `json:"titleHash"`
-	CreatedAt string    `json:"createdAt"` // Changed to string to ensure determinism
-	UpdatedAt string    `json:"updatedAt"` // Changed to string
+	CreatedAt string    `json:"createdAt"`
+	UpdatedAt string    `json:"updatedAt"`
 }
 
-// CreateEscrow - Deterministic version using transaction timestamp
+// CreateEscrow
 func (e *EscrowContract) CreateEscrow(ctx contractapi.TransactionContextInterface,
 	id string, buyer string, seller string, amount float64, titleHash string) error {
 
@@ -38,7 +38,7 @@ func (e *EscrowContract) CreateEscrow(ctx contractapi.TransactionContextInterfac
 		return fmt.Errorf("escrow %s already exists", id)
 	}
 
-	// Get transaction timestamp from stub (deterministic - same for all peers)
+	// Get transaction timestamp from stub
 	txTimestamp, err := ctx.GetStub().GetTxTimestamp()
 	if err != nil {
 		return fmt.Errorf("failed to get transaction timestamp: %v", err)
