@@ -14,6 +14,8 @@ fabric-escrow/
 
 ##  PREMIER DÉMARRAGE (À ZÉRO)
 
+### Remarque : toutes ces commandes doivent être exécutées sur la ligne de commande WSL 
+
 ### 1. Prérequis
 
  Vérifier les versions
@@ -66,7 +68,7 @@ docker-compose -f docker-compose-net.yaml up -d
 docker ps
 
 ```
- Vous devriez voir 9 conteneurs:
+ Vous devriez voir 9 conteneurs :
  - 3 CAs (ca_org1, ca_org2, ca_orderer)
  - 2 peers (peer0.org1, peer0.org2)
  - 1 orderer
